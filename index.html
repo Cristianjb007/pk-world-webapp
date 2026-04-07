@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Jogo Pokémon GBA</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      background: #222;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace, Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    #game {
+      margin: 40px auto;
+      background: #111;
+      border: 4px solid #44c;
+      width: 320px;
+      height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      border-radius: 12px;
+      box-shadow: 0 0 24px #44c8;
+    }
+    button {
+      margin: 16px 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      background: #44c;
+      color: #fff;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #228;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <h1>Mini Jogo Pokémon</h1>
+  <div id="game">Bem-vindo ao mini jogo!<br>Pressione "Jogar" para começar.</div>
+  <button id="playBtn">Jogar</button>
+  <button onclick="Telegram.WebApp.close()">Fechar</button>
+  <script>
+    Telegram.WebApp.ready();
+    const gameDiv = document.getElementById('game');
+    const playBtn = document.getElementById('playBtn');
+    playBtn.onclick = function() {
+      gameDiv.innerHTML = 'Você encontrou um Pikachu selvagem!<br><button id="catchBtn">Tentar Capturar</button>';
+      setTimeout(() => {
+        document.getElementById('catchBtn').onclick = function() {
+          const success = Math.random() < 0.5;
+          if (success) {
+            gameDiv.innerHTML = 'Parabéns! Você capturou o Pikachu!';
+            Telegram.WebApp.sendData('capturado:Pikachu');
+          } else {
+            gameDiv.innerHTML = 'O Pikachu fugiu!<br><button id="playBtn2">Tentar Novamente</button>';
+            setTimeout(() => {
+              document.getElementById('playBtn2').onclick = playBtn.onclick;
+            }, 100);
+          }
+        };
+      }, 100);
+    };
+  </script>
+</body>
+</html>
