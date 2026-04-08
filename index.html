@@ -356,14 +356,46 @@
     
     // Carregar sprite do jogador
     function loadPlayerSprite() {
-      createPlayerSprites();
-      updatePlayerSprite();
+      // Carregar sprites direcionais
+      const directions = ['up', 'down', 'left', 'right'];
+      let loadedSprites = 0;
+      
+      directions.forEach(direction => {
+        const img = new Image();
+        img.src = `./assets/player_${direction}.png`;
+        img.onload = function() {
+          playerSprites[direction] = img.src;
+          loadedSprites++;
+          
+          // Quando todos os sprites carregarem, atualizar sprite inicial
+          if (loadedSprites === directions.length) {
+            updatePlayerSprite();
+          }
+        };
+        img.onerror = function() {
+          // Se um sprite não carregar, criar fallback
+          createPlayerSprites();
+          updatePlayerSprite();
+        };
+      });
+      
+      // Definir tamanho do sprite
+      playerImg.style.width = '32px';
+      playerImg.style.height = '32px';
     }
     
     // Atualizar sprite baseado na direção
     function updatePlayerSprite() {
       if (playerSprites[player.facing]) {
+        // Usar sprite direcional específico
         playerImg.src = playerSprites[player.facing];
+        playerImg.style.transform = 'rotate(0deg)'; // Resetar rotação
+      } else {
+        // Fallback para sprites criados programaticamente
+        createPlayerSprites();
+        if (playerSprites[player.facing]) {
+          playerImg.src = playerSprites[player.facing];
+        }
       }
     }
     
