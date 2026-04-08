@@ -3,74 +3,500 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mini Jogo Pokémon GBA</title>
+  <title>Pokémon World - Mapa</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
-      background: #222;
+      background: #1a1a2e;
       color: #fff;
       font-family: 'Press Start 2P', monospace, Arial, sans-serif;
       text-align: center;
       margin: 0;
       padding: 0;
+      overflow: hidden;
     }
-    #game {
-      margin: 40px auto;
-      background: #111;
-      border: 4px solid #44c;
-      width: 320px;
-      height: 240px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      border-radius: 12px;
-      box-shadow: 0 0 24px #44c8;
+    
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
     }
-    button {
-      margin: 16px 8px;
-      padding: 12px 24px;
+    
+    #mapCanvas {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+    
+    #player {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      transition: all 0.15s ease-out;
+      z-index: 10;
+    }
+    
+    .controls-info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.8);
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #44c;
+      font-size: 10px;
+      z-index: 20;
+    }
+    
+    .d-pad {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 20;
+    }
+    
+    .d-pad button {
+      width: 40px;
+      height: 40px;
+      margin: 2px;
       font-size: 16px;
-      border-radius: 8px;
-      border: none;
+      padding: 0;
       background: #44c;
       color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .d-pad button:hover {
+      background: #228;
+    }
+    
+    .d-pad-row {
+      display: flex;
+      justify-content: center;
+    }
+    
+    #message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.9);
+      padding: 20px;
+      border-radius: 10px;
+      border: 2px solid #44c;
+      z-index: 30;
+      display: none;
+      max-width: 80%;
+    }
+    
+    #message h3 {
+      margin: 0 0 10px 0;
+      color: #44c;
+    }
+    
+    #message button {
+      background: #44c;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      margin-top: 10px;
+      border-radius: 5px;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.2s;
+      font-size: 10px;
     }
-    button:hover {
+    
+    .action-buttons {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      z-index: 20;
+    }
+    
+    .action-buttons button {
+      display: block;
+      width: 100px;
+      margin: 5px 0;
+      background: #44c;
+      color: #fff;
+      border: none;
+      padding: 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 8px;
+    }
+    
+    .action-buttons button:hover {
       background: #228;
     }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-  <h1>Mini Jogo Pokémon</h1>
-  <div id="game">Bem-vindo ao mini jogo!<br>Pressione "Jogar" para começar.</div>
-  <button id="playBtn">Jogar</button>
-  <button onclick="Telegram.WebApp.close()">Fechar</button>
+  <div id="gameContainer">
+    <canvas id="mapCanvas"></canvas>
+    <img id="player" src="" alt="Player">
+    
+    <div class="controls-info">
+      <div>Posição: <span id="position">0, 0</span></div>
+      <div>Use WASD ou Setas</div>
+      <div>Espaço: Interagir</div>
+    </div>
+    
+    <div class="action-buttons">
+      <button onclick="interact()">Interagir</button>
+      <button onclick="openMenu()">Menu</button>
+      <button onclick="searchPokemon()">Procurar PK</button>
+    </div>
+    
+    <div class="d-pad">
+      <div class="d-pad-row">
+        <button onclick="movePlayer('up')">W</button>
+      </div>
+      <div class="d-pad-row">
+        <button onclick="movePlayer('left')">A</button>
+        <button onclick="movePlayer('down')">S</button>
+        <button onclick="movePlayer('right')">D</button>
+      </div>
+    </div>
+    
+    <div id="message">
+      <h3 id="messageTitle">Mensagem</h3>
+      <p id="messageText">Conteúdo da mensagem</p>
+      <button onclick="closeMessage()">Fechar</button>
+    </div>
+  </div>
+  
   <script>
-    Telegram.WebApp.ready();
-    const gameDiv = document.getElementById('game');
-    const playBtn = document.getElementById('playBtn');
-    playBtn.onclick = function() {
-      gameDiv.innerHTML = 'Você encontrou um Pikachu selvagem!<br><button id="catchBtn">Tentar Capturar</button>';
-      setTimeout(() => {
-        document.getElementById('catchBtn').onclick = function() {
-          const success = Math.random() < 0.5;
-          if (success) {
-            gameDiv.innerHTML = 'Parabéns! Você capturou o Pikachu!';
-            Telegram.WebApp.sendData('capturado:Pikachu');
-          } else {
-            gameDiv.innerHTML = 'O Pikachu fugiu!<br><button id="playBtn2">Tentar Novamente</button>';
-            setTimeout(() => {
-              document.getElementById('playBtn2').onclick = playBtn.onclick;
-            }, 100);
-          }
-        };
-      }, 100);
+    // Configuração do jogo
+    const TILE_SIZE = 32;
+    const MAP_WIDTH = 20;
+    const MAP_HEIGHT = 15;
+    const MOVE_SPEED = 1;
+    
+    // Estado do jogador
+    let player = {
+      x: 10,
+      y: 7,
+      sprite: null,
+      facing: 'down'
     };
+    
+    // Elementos do DOM
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const playerImg = document.getElementById('player');
+    const positionDisplay = document.getElementById('position');
+    const messageDiv = document.getElementById('message');
+    const messageTitle = document.getElementById('messageTitle');
+    const messageText = document.getElementById('messageText');
+    
+    // Inicializar Telegram Web App
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
+    
+    // Configurar canvas
+    canvas.width = MAP_WIDTH * TILE_SIZE;
+    canvas.height = MAP_HEIGHT * TILE_SIZE;
+    
+    // Mapa tiles (0 = grama, 1 = água, 2 = árvore, 3 = pedra, 4 = caminho, 5 = areia)
+    const mapTiles = [
+      [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+      [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+      [4,0,2,2,2,0,0,5,5,5,5,5,0,2,2,2,0,0,0,4],
+      [4,0,2,2,2,0,0,5,5,5,5,5,0,2,2,2,0,0,0,4],
+      [4,0,0,0,0,0,0,5,5,5,5,5,0,0,0,0,0,0,0,4],
+      [4,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,4],
+      [4,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,4],
+      [4,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,4],
+      [4,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,4],
+      [4,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,4],
+      [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+      [4,0,2,2,2,0,0,0,0,0,0,0,0,2,2,2,0,0,0,4],
+      [4,0,2,2,2,0,0,0,0,0,0,0,0,2,2,2,0,0,0,4],
+      [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+      [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+    ];
+    
+    // Cores dos tiles
+    const tileColors = {
+      0: '#4CAF50', // grama
+      1: '#2196F3', // água
+      2: '#2E7D32', // árvore
+      3: '#757575', // pedra
+      4: '#8D6E63', // caminho
+      5: '#FDD835'  // areia
+    };
+    
+    // Pokémon disponíveis
+    const pokemonData = {
+      25: { name: 'Pikachu', hp: 35, maxHp: 35, catchRate: 35 },
+      1: { name: 'Bulbasaur', hp: 45, maxHp: 45, catchRate: 45 },
+      4: { name: 'Charmander', hp: 39, maxHp: 39, catchRate: 45 },
+      7: { name: 'Squirtle', hp: 44, maxHp: 44, catchRate: 45 },
+      150: { name: 'Mewtwo', hp: 106, maxHp: 106, catchRate: 3 },
+      143: { name: 'Snorlax', hp: 160, maxHp: 160, catchRate: 25 },
+      94: { name: 'Gengar', hp: 60, maxHp: 60, catchRate: 45 },
+      149: { name: 'Dragonite', hp: 91, maxHp: 91, catchRate: 15 }
+    };
+    
+    // Carregar sprite do jogador
+    function loadPlayerSprite() {
+      // Criar sprite inline para GitHub Pages
+      const spriteCanvas = document.createElement('canvas');
+      spriteCanvas.width = 32;
+      spriteCanvas.height = 32;
+      const spriteCtx = spriteCanvas.getContext('2d');
+      
+      // Desenhar personagem simples
+      spriteCtx.fillStyle = '#FF5722'; // Laranja
+      spriteCtx.fillRect(12, 8, 8, 8); // Cabeça
+      spriteCtx.fillRect(10, 16, 12, 12); // Corpo
+      spriteCtx.fillStyle = '#000'; // Preto
+      spriteCtx.fillRect(14, 10, 2, 2); // Olho esquerdo
+      spriteCtx.fillRect(18, 10, 2, 2); // Olho direito
+      spriteCtx.fillStyle = '#33A'; // Azul
+      spriteCtx.fillRect(12, 24, 4, 8); // Perna esquerda
+      spriteCtx.fillRect(16, 24, 4, 8); // Perna direita
+      
+      playerImg.src = spriteCanvas.toDataURL();
+    }
+    
+    // Desenhar mapa
+    function drawMap() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (let y = 0; y < MAP_HEIGHT; y++) {
+        for (let x = 0; x < MAP_WIDTH; x++) {
+          const tile = mapTiles[y][x];
+          ctx.fillStyle = tileColors[tile];
+          ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          
+          // Adicionar bordas para melhor visualização
+          ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+          ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+      }
+    }
+    
+    // Atualizar posição do jogador
+    function updatePlayerPosition() {
+      playerImg.style.left = (player.x * TILE_SIZE) + 'px';
+      playerImg.style.top = (player.y * TILE_SIZE) + 'px';
+      positionDisplay.textContent = `${player.x}, ${player.y}`;
+    }
+    
+    // Verificar colisão
+    function canMoveTo(x, y) {
+      if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) {
+        return false;
+      }
+      
+      const tile = mapTiles[y][x];
+      // Tiles que bloqueiam movimento: água (1), árvore (2), pedra (3)
+      return tile !== 1 && tile !== 2 && tile !== 3;
+    }
+    
+    // Mover jogador
+    function movePlayer(direction) {
+      let newX = player.x;
+      let newY = player.y;
+      
+      switch(direction) {
+        case 'up':
+          newY -= MOVE_SPEED;
+          player.facing = 'up';
+          break;
+        case 'down':
+          newY += MOVE_SPEED;
+          player.facing = 'down';
+          break;
+        case 'left':
+          newX -= MOVE_SPEED;
+          player.facing = 'left';
+          break;
+        case 'right':
+          newX += MOVE_SPEED;
+          player.facing = 'right';
+          break;
+      }
+      
+      if (canMoveTo(newX, newY)) {
+        player.x = newX;
+        player.y = newY;
+        updatePlayerPosition();
+        
+        // Verificar eventos especiais
+        checkSpecialTiles();
+      } else {
+        // Feedback visual de colisão
+        playerImg.style.filter = 'brightness(0.5)';
+        setTimeout(() => {
+          playerImg.style.filter = 'none';
+        }, 100);
+      }
+    }
+    
+    // Verificar tiles especiais
+    function checkSpecialTiles() {
+      const currentTile = mapTiles[player.y][player.x];
+      
+      switch(currentTile) {
+        case 0: // Grama
+          // Chance de encontrar Pokémon
+          if (Math.random() < 0.15) { // 15% de chance
+            const pokemonIds = Object.keys(pokemonData);
+            const randomId = pokemonIds[Math.floor(Math.random() * pokemonIds.length)];
+            const pokemon = pokemonData[randomId];
+            
+            showMessage('Pokémon Selvagem!', `Um ${pokemon.name} selvagem apareceu! HP: ${pokemon.hp}/${pokemon.maxHp}`);
+          }
+          break;
+        case 5: // Areia
+          if (Math.random() < 0.05) { // 5% de chance
+            showMessage('Item Encontrado!', 'Você encontrou uma Pokébola na areia!');
+          }
+          break;
+      }
+    }
+    
+    // Interagir
+    function interact() {
+      const currentTile = mapTiles[player.y][player.x];
+      let message = '';
+      
+      switch(currentTile) {
+        case 0:
+          message = 'Você está na grama. Pokémon selvagens podem aparecer aqui!';
+          break;
+        case 1:
+          message = 'Água profunda. Você não pode nadar aqui.';
+          break;
+        case 2:
+          message = 'Uma árvore alta bloqueia o caminho.';
+          break;
+        case 3:
+          message = 'Uma pedra sólida. Impossível mover.';
+          break;
+        case 4:
+          message = 'Um caminho seguro. Bom para viajar.';
+          break;
+        case 5:
+          message = 'Areia quente. Cuidado com os itens escondidos!';
+          break;
+      }
+      
+      showMessage('Interação', message);
+    }
+    
+    // Abrir menu
+    function openMenu() {
+      showMessage('Menu', 'Opções:\n\n1. Status do Treinador\n2. Pokémon Capturados\n3. Itens\n4. Configurações\n\n(Em desenvolvimento)');
+    }
+    
+    // Procurar Pokémon ativamente
+    function searchPokemon() {
+      const currentTile = mapTiles[player.y][player.x];
+      
+      if (currentTile === 0) { // Só pode procurar na grama
+        showMessage('Procurando...', 'Procurando Pokémon na grama...');
+        
+        setTimeout(() => {
+          const pokemonIds = Object.keys(pokemonData);
+          const randomId = pokemonIds[Math.floor(Math.random() * pokemonIds.length)];
+          const pokemon = pokemonData[randomId];
+          
+          showMessage('Pokémon Encontrado!', `Você encontrou um ${pokemon.name}!\n\nHP: ${pokemon.hp}/${pokemon.maxHp}\nTaxa de captura: ${pokemon.catchRate}/255\n\nUse o botão do Mini App para capturar!`);
+          
+          // Enviar dados para o bot se capturar
+          if (confirm('Deseja tentar capturar este Pokémon?')) {
+            Telegram.WebApp.sendData(`wild_encounter:${randomId}:${pokemon.name}`);
+          }
+        }, 1500);
+      } else {
+        showMessage('Procurar Pokémon', 'Você só pode procurar Pokémon na grama!');
+      }
+    }
+    
+    // Mostrar mensagem
+    function showMessage(title, text) {
+      messageTitle.textContent = title;
+      messageText.textContent = text;
+      messageDiv.style.display = 'block';
+      
+      // Auto-fechar após 3 segundos para mensagens simples
+      if (title !== 'Pokémon Encontrado!' && title !== 'Menu') {
+        setTimeout(() => {
+          closeMessage();
+        }, 3000);
+      }
+    }
+    
+    // Fechar mensagem
+    function closeMessage() {
+      messageDiv.style.display = 'none';
+    }
+    
+    // Controles de teclado
+    document.addEventListener('keydown', function(event) {
+      switch(event.key.toLowerCase()) {
+        case 'w':
+        case 'arrowup':
+          event.preventDefault();
+          movePlayer('up');
+          break;
+        case 's':
+        case 'arrowdown':
+          event.preventDefault();
+          movePlayer('down');
+          break;
+        case 'a':
+        case 'arrowleft':
+          event.preventDefault();
+          movePlayer('left');
+          break;
+        case 'd':
+        case 'arrowright':
+          event.preventDefault();
+          movePlayer('right');
+          break;
+        case ' ':
+          event.preventDefault();
+          interact();
+          break;
+        case 'm':
+          event.preventDefault();
+          openMenu();
+          break;
+        case 'p':
+          event.preventDefault();
+          searchPokemon();
+          break;
+      }
+    });
+    
+    // Inicializar jogo
+    function initGame() {
+      drawMap();
+      loadPlayerSprite();
+      updatePlayerPosition();
+      showMessage('Bem-vindo ao PK World!', 'Use WASD ou as setas para mover pelo mapa. Pressione P para procurar Pokémon!');
+    }
+    
+    // Iniciar quando carregar
+    window.addEventListener('load', initGame);
   </script>
 </body>
 </html>
